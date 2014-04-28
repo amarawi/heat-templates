@@ -57,11 +57,6 @@ Resources:
           ToPort: '22'
         - 
           CidrIp: 0.0.0.0/0
-          FromPort: '80'
-          IpProtocol: tcp
-          ToPort: '80'
-        - 
-          CidrIp: 0.0.0.0/0
           FromPort: '5432'
           IpProtocol: tcp
           ToPort: '5432'
