@@ -1,10 +1,10 @@
 HeatTemplateFormatVersion: 2012-12-12
 Description: >
-  Create a PostgreSQL database server using a CentOS image. It only 
-  creates a superuser and disables the login of posgres from remote 
-  machinces. The version of PostgreSQL depends on the yum 
-  repository. It will create a security group so make sure there is 
-  enough allocation of security group. User can login to the server 
+  Create a PostgreSQL database server using a CentOS image. It only
+  creates a superuser and disables the login of posgres from remote
+  machinces. The version of PostgreSQL depends on the yum
+  repository. It will create a security group so make sure there is
+  enough allocation of security group. User can login to the server
   through ssh using their NeCTAR key.
 Parameters: 
   DBUsername: 
@@ -48,7 +48,7 @@ Resources:
   DBServerSecurityGroup: 
     Type: AWS::EC2::SecurityGroup
     Properties: 
-      GroupDescription: Enable HTTP access via port 80 plus SSH access, postgreSQL 5432
+      GroupDescription: Enable SSH access, postgreSQL assess at port 5432
       SecurityGroupIngress: 
         - 
           CidrIp: 0.0.0.0/0
