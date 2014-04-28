@@ -1,0 +1,115 @@
+HeatTemplateFormatVersion: 2012-12-12
+Description: >
+  Create a PostgreSQL database server using a CentOS image. It only 
+  creates a superuser and disables the login of posgres from remote 
+  machinces. The version of PostgreSQL depends on the yum 
+  repository. It will create a security group so make sure there is 
+  enough allocation of security group. User can login to the server 
+  through ssh using their NeCTAR key.
+Parameters: 
+  DBUsername: 
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters and no longer than 20 letters.
+    Default: myapplicationadmin
+    Description: Your application's database admin account username
+    MaxLength: 30
+    MinLength: 3
+    Type: String
+  DBPassword: 
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
+    Default: admin
+    Description: Database admin account password
+    MaxLength: 41
+    MinLength: 5
+    NoEcho: true
+    Type: String
+  ImageId:
+   # For all NeCTAR images, only this image works with service command 
+    Default: 5841b33e-2cdf-45d0-bca7-33c8967d3244
+    Description: > 
+      NeCTAR CentOS 6.5 x86_64 or any RHE flavour images still 
+      support command service. Always use image ID
+    Type: String
+  InstanceType: 
+    ConstraintDescription: must be a valid nova instance type.
+    AllowedValues: ['m1.small', 'm1.medium', 'm1.large']
+    Default: m1.small
+    Description: A PostgreSQL server
+    Type: String
+  KeyName: 
+    AllowedPattern: '[-_ a-zA-Z0-9]*'
+    ConstraintDescription: can contain only alphanumeric characters, spaces, dashes and underscores.
+    Description: Name of an existing OpenStack KeyPair to enable SSH access to the instances.
+    MaxLength: 64
+    MinLength: 1
+    Type: String
+Resources: 
+  DBServerSecurityGroup: 
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: Enable HTTP access via port 80 plus SSH access, postgreSQL 5432
+      SecurityGroupIngress: 
+        - 
+          CidrIp: 0.0.0.0/0
+          FromPort: '22'
+          IpProtocol: tcp
+          ToPort: '22'
+        - 
+          CidrIp: 0.0.0.0/0
+          FromPort: '80'
+          IpProtocol: tcp
+          ToPort: '80'
+        - 
+          CidrIp: 0.0.0.0/0
+          FromPort: '5432'
+          IpProtocol: tcp
+          ToPort: '5432'
+  DatabaseServer: 
+    Type: AWS::EC2::Instance
+    Metadata: 
+      AWS::CloudFormation::Init: 
+        config: 
+          packages: 
+            yum: 
+              postgresql: []
+              postgresql-server: []
+    Properties: 
+      ImageId: 
+        Ref: ImageId
+      InstanceType: 
+        Ref: InstanceType
+      KeyName: 
+        Ref: KeyName
+      SecurityGroups: [{Ref: DBServerSecurityGroup}]
+      UserData: 
+        Fn::Base64: 
+           Fn::Replace:
+            - AWS::StackName: {Ref: 'AWS::StackName'}
+              dbpassword: {Ref: DBPassword}
+              dbusername: {Ref: DBUsername}
+            - |
+                #!/bin/bash -v
+                yum update -y
+                /usr/bin/cfn-init -s AWS::StackName -r DatabaseServer 
+                sudo service postgresql initdb
+                sudo service postgresql start
+                
+                sudo wget --no-check-certificate -N https://raw.githubusercontent.com/eResearchSA/heat-templates/master/postgresql/pg_hba.conf -P /var/lib/pgsql/data/
+                sudo wget --no-check-certificate -N https://raw.githubusercontent.com/eResearchSA/heat-templates/master/postgresql/postgresql.conf -P /var/lib/pgsql/data/
+                sudo service postgresql restart
+                sudo -u postgres psql -c "CREATE USER dbusername WITH SUPERUSER ENCRYPTED PASSWORD 'dbpassword';"
+Outputs: 
+  AccessURL: 
+    Description: 'The database can be access at: '
+    Value: 
+      Fn::Join: 
+        - ' '
+        - 
+          - psql -h 
+          - Fn::GetAtt: 
+              - DatabaseServer
+              - PublicIp
+          - -U
+          - Ref : DBUsername
+          - -d postgres
