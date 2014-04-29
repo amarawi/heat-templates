@@ -62,19 +62,7 @@ Resources:
               mysql-server: []
           files:
             /home/ec2-user/my.cnf:
-              content: |
-                 ## Only minimal settings to allow InnoDB and network connection
-                 [mysqld]
-                 datadir=/var/lib/mysql
-                 socket=/var/lib/mysql/mysql.sock
-                 user=mysql
-                 default-storage-engine=InnoDB
-                 # Disabling symbolic-links is recommended to prevent assorted security risks
-                 symbolic-links=0
-                 
-                 [mysqld_safe]
-                 log-error=/var/log/mysqld.log
-                 pid-file=/var/run/mysqld/mysqld.pid
+              source: https://raw.githubusercontent.com/eResearchSA/heat-templates/master/mysql/my.cnf
           services: 
             sysvinit: 
               mysqld: 
