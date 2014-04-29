@@ -1,0 +1,122 @@
+HeatTemplateFormatVersion: 2012-12-12
+Description: >
+  Create a MyQL database server using a CentOS image. It only
+  creates a superuser. The version of MySQL depends on the yum
+  repository. It will create a security group so make sure there is
+  enough allocation of security group. User can login to the server
+  through ssh using their NeCTAR key.
+Parameters: 
+  InstanceType: 
+    Description: MySQL database server
+    Type: String
+    Default: "m1.small"
+    AllowedValues: ['m1.tiny', 'm1.small', 'm1.medium', 'm1.large']
+    ConstraintDescription: must be a valid nova instance type.
+  ImageId:
+   # For all NeCTAR images, only this image works with service command 
+    Default: 5841b33e-2cdf-45d0-bca7-33c8967d3244
+    Description: > 
+      NeCTAR CentOS 6.5 x86_64 or any RHE flavour images still 
+      support command service. Always use image ID
+    Type: String
+  KeyName: 
+    AllowedPattern: '[-_ a-zA-Z0-9]*'
+    ConstraintDescription: can contain only alphanumeric characters, spaces, dashes and underscores.
+    Description: Name of an existing OpenStack KeyPair to enable SSH access to the instance.
+    MaxLength: 64
+    MinLength: 1
+    Type: String
+  DBRootPassword: 
+    Default: admin
+    NoEcho: true
+    Description: Root password for MySQL
+    Type: String
+    MinLength: 1
+    MaxLength: 41
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
+Resources:
+  DBServerSecurityGroup: 
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: Enable SSH access, MySQL assess at port 3306
+      SecurityGroupIngress: 
+        - 
+          CidrIp: 0.0.0.0/0
+          FromPort: '22'
+          IpProtocol: tcp
+          ToPort: '22'
+        - 
+          CidrIp: 0.0.0.0/0
+          FromPort: '3306'
+          IpProtocol: tcp
+          ToPort: '3306'
+  DatabaseServer: 
+    Type: AWS::EC2::Instance
+    Metadata: 
+      AWS::CloudFormation::Init: 
+        config: 
+          packages: 
+            yum: 
+              mysql: []
+              mysql-server: []
+          files:
+            /home/ec2-user/my.cnf:
+              content: |
+                 ## Only minimal settings to allow InnoDB and network connection
+                 [mysqld]
+                 datadir=/var/lib/mysql
+                 socket=/var/lib/mysql/mysql.sock
+                 user=mysql
+                 default-storage-engine=InnoDB
+                 # Disabling symbolic-links is recommended to prevent assorted security risks
+                 symbolic-links=0
+                 
+                 [mysqld_safe]
+                 log-error=/var/log/mysqld.log
+                 pid-file=/var/run/mysqld/mysqld.pid
+          services: 
+            sysvinit: 
+              mysqld: 
+                enabled: true
+                ensureRunning: true
+    Properties: 
+      ImageId: 
+        Ref: ImageId
+      InstanceType: 
+        Ref: InstanceType
+      KeyName: 
+        Ref: KeyName
+      SecurityGroups: [{Ref: DBServerSecurityGroup}] 
+      UserData: 
+        Fn::Base64: 
+           Fn::Replace:
+            - AWS::StackName: {Ref: 'AWS::StackName'}
+              dbrootpwd: {Ref: DBRootPassword}
+            - |
+                #!/bin/bash -v
+                yum update -y
+                /usr/bin/cfn-init -s AWS::StackName -r DatabaseServer 
+
+                # Setup MySQL root password 
+                mysqladmin -u root password dbrootpwd
+                cat << EOF | mysql -u root --password=dbrootpwd
+                GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'dbrootpwd' WITH GRANT OPTION;
+                FLUSH PRIVILEGES;
+                exit
+                EOF
+
+                cp /home/ec2-user/my.cnf /etc/my.cnf
+                service mysqld restart
+Outputs: 
+  AccessURL: 
+    Description: 'The database can be access at: '
+    Value: 
+    Value: 
+      Fn::Join: 
+        - ' '
+        - 
+          - mysql -u root -p -h
+          - Fn::GetAtt: 
+              - DatabaseServer
+              - PublicIp
