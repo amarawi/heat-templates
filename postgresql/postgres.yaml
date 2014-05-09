@@ -26,7 +26,7 @@ Parameters:
     Type: String
   ImageId:
    # For all NeCTAR images, only this image works with service command 
-    Default: 5841b33e-2cdf-45d0-bca7-33c8967d3244
+    Default: 96761a90-635b-4718-8deb-f4ff57632db4
     Description: > 
       NeCTAR CentOS 6.5 x86_64 or any RHE flavour images still 
       support command service. Always use image ID
