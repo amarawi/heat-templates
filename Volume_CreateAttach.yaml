@@ -1,0 +1,84 @@
+HeatTemplateFormatVersion: 2012-12-12
+Description: > 
+  CFN template snippet. Create a volume storge and attach to an instance.
+  You have to have NeCTAR volume storage allocation and knowing where to create storage.
+  Not all nodes have stroage. The demo image is CentOS 6.5.
+Parameters:
+  KeyName: 
+    Description: Name of an existing Openstack KeyPair to enable SSH access to the instances
+    Type: String
+  InstanceType:
+    Description: Instance type
+    Type: String
+    Default: m1.small
+    AllowedValues: [m1.tiny, m1.small, m1.medium, m1.large, m1.xlarge]
+    ConstraintDescription: must be a valid Openstack instance type.
+  VolumeSize: 
+    Description: Volume size in GB.
+    Type: Number
+    Default: 1
+    MinValue: 1
+    MaxValue: 10
+    ConstraintDescription: must be between 1 and 10 GB.
+Resources:
+  DataVolume:
+    Type: AWS::EC2::Volume
+    Properties:
+      Size: {Ref: VolumeSize}
+      AvailabilityZone:
+        Fn::GetAtt: [VolumeHost, AvailabilityZone]
+#not used by Openstack::Heat
+      Tags:
+        - {Key: Usage, Value: {Ref: 'AWS::StackName'} }
+    DeletionPolicy: Retain
+  MountPoint:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId: {Ref: VolumeHost}
+      VolumeId: {Ref: DataVolume}
+      Device: /dev/vdc
+  VolumeHost:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              parted: []
+    Properties:
+      ImageId: 96761a90-635b-4718-8deb-f4ff57632db4
+      InstanceType: {Ref: InstanceType}
+      KeyName: {Ref: KeyName}
+      AvailabilityZone: melbourne-qh2
+      SecurityGroups: [default]
+      UserData: 
+        Fn::Base64: 
+           Fn::Replace:
+            - AWS::StackName: {Ref: 'AWS::StackName'}
+            - |
+                #!/bin/bash -v
+                /usr/bin/cfn-init -s AWS::StackName -r VolumeHost 
+                
+                # Wait for the volume to appear
+                while [ ! -e /dev/vdc ]; do echo Waiting for volume to attach; sleep 1; done
+                parted -s /dev/vdc mklabel msdos
+                # Assume use the full volume
+                parted -s /dev/vdc mkpart primary ext3 0% 100%
+                # Format the EBS volume and mount it
+                /sbin/mkfs -t ext4 /dev/vdc1
+                mkdir /mnt/demo
+                mount /dev/vdc1 /mnt/demo
+Outputs:
+  'URL to check':
+    Value:
+      Fn::Join:
+        - ''
+        - 
+          - 'ssh -i '
+          - {Ref: KeyName}
+          - '.pem ec2-user@'
+          - Fn::GetAtt: [VolumeHost, PublicIp]
+    Description: > 
+      IP for ssh in to check the mounted volume.
+      REMEMBER to manually de-attach volume before delete the stack.
+
