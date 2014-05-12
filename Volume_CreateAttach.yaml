@@ -1,8 +1,11 @@
 HeatTemplateFormatVersion: 2012-12-12
 Description: > 
-  CFN template snippet. Create a volume storge and attach to an instance.
-  You have to have NeCTAR volume storage allocation and knowing where to create storage.
-  Not all nodes have stroage. The demo image is CentOS 6.5.
+  CFN template snippet. Create a volume storge and attach to an 
+  instance. It also attach an existing one to /dev/vdd. You have to 
+  have NeCTAR volume storage allocation and knowing where to create 
+  storage. Not all nodes have stroage. All mounted volumes have to 
+  be umounted and de-attched before delete stack. The demo image is 
+  CentOS 6.5.
 Parameters:
   KeyName: 
     Description: Name of an existing Openstack KeyPair to enable SSH access to the instances
@@ -31,12 +34,18 @@ Resources:
       Tags:
         - {Key: Usage, Value: {Ref: 'AWS::StackName'} }
     DeletionPolicy: Retain
+  MountExisting:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId: {Ref: VolumeHost}
+      VolumeId: 710ccfc7-c472-4b78-9225-b1be2e965305
+      Device: /dev/vdc
   MountPoint:
     Type: AWS::EC2::VolumeAttachment
     Properties:
       InstanceId: {Ref: VolumeHost}
       VolumeId: {Ref: DataVolume}
-      Device: /dev/vdc
+      Device: /dev/vdd
   VolumeHost:
     Type: AWS::EC2::Instance
     Metadata:
@@ -61,13 +70,19 @@ Resources:
                 
                 # Wait for the volume to appear
                 while [ ! -e /dev/vdc ]; do echo Waiting for volume to attach; sleep 1; done
-                parted -s /dev/vdc mklabel msdos
-                # Assume use the full volume
-                parted -s /dev/vdc mkpart primary ext3 0% 100%
-                # Format the EBS volume and mount it
-                /sbin/mkfs -t ext4 /dev/vdc1
                 mkdir /mnt/demo
                 mount /dev/vdc1 /mnt/demo
+
+                # Wait for the volume vdc to appear
+                while [ ! -e /dev/vdd ]; do echo Waiting for volume to attach; sleep 1; done
+                parted -s /dev/vdd mklabel msdos
+                # Assume use the full volume
+                parted -s /dev/vdd mkpart primary ext4 0% 100%
+                # Format the EBS volume and mount it
+                /sbin/mkfs -t ext4 /dev/vdd1
+                mkdir /mnt/demo_new
+                mount /dev/vdd1 /mnt/demo_new
+
 Outputs:
   'URL to check':
     Value:
@@ -80,5 +95,5 @@ Outputs:
           - Fn::GetAtt: [VolumeHost, PublicIp]
     Description: > 
       IP for ssh in to check the mounted volume.
-      REMEMBER to manually de-attach volume before delete the stack.
+      REMEMBER to umount volumes and manually de-attach them before delete the stack.
 
