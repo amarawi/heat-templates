@@ -12,15 +12,15 @@ Parameters:
     Type: String
     Default: 249167f4-3d45-402a-9362-557c23628352
   InstanceType: 
-    Description: Opebnstack instance type
+    Description: OpenStack instance type
     Type: String
-    ConstraintDescription: must be a valid Openstack instance type.
-    AllowedValues: ['m1.small', 'm1.medium', 'm1.large']
+    ConstraintDescription: must be a valid OpenStack instance type.
+    AllowedValues: [m1.tiny, m1.small, m1.medium, m1.large, m1.xlarge]
     Default: m1.small
   KeyName: 
     Description: Name of an existing OpenStack KeyPair to enable SSH access to the instances.
     Type: String
-    ConstraintDescription: can contain only alphanumeric characters, spaces, dashes and underscores.
+    ConstraintDescription: can contain only alphanumeric characters, dashes and underscores.
     AllowedPattern: '[-_ a-zA-Z0-9]*'
     MaxLength: 64
     MinLength: 1

@@ -1,7 +1,7 @@
 heat-templates
 ==============
 
-Openstack Heat templates for use on the [NeCTAR](http://nectar.org.au/) cloud.
+OpenStack Heat templates for use on the [NeCTAR](http://nectar.org.au/) cloud.
 
 Different distributions (versions) have different commands to manage 
 services or install packages. Some commands have different paths on 
@@ -17,5 +17,5 @@ make sure volumes are:
 * de-attached
 
 before the deletion. Fail to do so, the file system can be 
-corrupted. Openstack Heat helpers do not take care of these yet 
+corrupted. OpenStack Heat helpers do not take care of these yet 
 (Havana).

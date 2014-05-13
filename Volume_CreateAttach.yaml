@@ -8,14 +8,14 @@ Description: >
   CentOS 6.5.
 Parameters:
   KeyName: 
-    Description: Name of an existing Openstack KeyPair to enable SSH access to the instances
+    Description: Name of an existing OpenStack KeyPair to enable SSH access to the instances
     Type: String
   InstanceType:
     Description: Instance type
     Type: String
     Default: m1.small
     AllowedValues: [m1.tiny, m1.small, m1.medium, m1.large, m1.xlarge]
-    ConstraintDescription: must be a valid Openstack instance type.
+    ConstraintDescription: must be a valid OpenStack instance type.
   VolumeSize: 
     Description: Volume size in GB.
     Type: Number
@@ -30,7 +30,7 @@ Resources:
       Size: {Ref: VolumeSize}
       AvailabilityZone:
         Fn::GetAtt: [VolumeHost, AvailabilityZone]
-#not used by Openstack::Heat
+#not used by OpenStack::Heat
       Tags:
         - {Key: Usage, Value: {Ref: 'AWS::StackName'} }
     DeletionPolicy: Retain
