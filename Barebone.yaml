@@ -8,8 +8,8 @@ Parameters:
   InstanceType: 
     Description: Opebnstack instance type
     Type: String
-    ConstraintDescription: must be a valid nova instance type.
-    AllowedValues: ['m1.small', 'm1.medium', 'm1.large']
+    ConstraintDescription: must be a valid Openstack instance type.
+    AllowedValues: [m1.tiny, m1.small, m1.medium, m1.large, m1.xlarge]
     Default: m1.small
   KeyName: 
     Description: Name of an existing OpenStack KeyPair to enable SSH access to the instances.
@@ -18,11 +18,6 @@ Parameters:
     AllowedPattern: '[-_ a-zA-Z0-9]*'
     MaxLength: 64
     MinLength: 1
-  InstanceType:
-    Type: String
-    ConstraintDescription: must be a valid Openstack instance type.
-    AllowedValues: [m1.tiny, m1.small, m1.medium, m1.large, m1.xlarge]
-    Default: m1.small
 
 Resources:
   SecurityGroups:
