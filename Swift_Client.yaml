@@ -1,0 +1,75 @@
+HeatTemplateFormatVersion: '2012-12-12'
+Description: A snippet for installing/using OpenStack Swith client on a system using YUM packaging system.
+
+Parameters: 
+  AUTH_URL:
+    Description: URL of keystone
+    Type: String
+    Default: https://keystone.rc.nectar.org.au:5000/v2.0/
+  TENANT_ID:
+    Description: Your project's tenent id (OS_TENANT_ID in openrc.sh)
+    Type: String
+  TENANT_NAME:
+    Description: Your project name (OS_TENANT_NAME in openrc.sh)
+    Type: String
+  NECTAR_UserName:
+    Description: Nectar username (OS_USERNAME in openrc.sh)
+    Type: String
+  KeystonePass:
+    Description: Keystone password for API access. Set on Nectar dashboard
+    Type: String
+    NoEcho: true
+  ContainerName:
+    Description: The name of the container in SWIFT object store
+    Type: String
+    Default: ''
+    
+Resources: 
+  SwiftClient: 
+    Type: "AWS::EC2::Instance"
+    Metadata: 
+      "AWS::CloudFormation::Init": 
+        config: 
+          packages: 
+            yum: 
+              gcc: []
+              python-devel: []
+              python-pip: []
+          files:
+            "/home/ec2-user/nectarrc.sh":
+                "content" : 
+                    'Fn::Replace':
+                    - authURL: {Ref: AUTH_URL}
+                      tenantID: {Ref: TENANT_ID} 
+                      tenantName: {Ref: TENANT_NAME}
+                      NECTAR_UserName: {Ref: NECTAR_UserName}
+                      KeystonePass: {Ref: KeystonePass}
+                      ContainerName: {Ref: ContainerName}
+                    - |
+                      #!/bin/bash
+                      export OS_AUTH_URL=authURL
+                      export OS_TENANT_ID=tenantID
+                      export OS_TENANT_NAME='tenantName'
+                      export OS_USERNAME='NECTAR_UserName'
+                      export OS_PASSWORD=KeystonePass
+                      export SWIFT_CONTAINER=ContainerName 
+                "mode" : "000644"
+                "owner" : "ec2-user"
+                "group" : "ec2-user"
+    Properties: 
+      UserData: 
+        "Fn::Base64": 
+           Fn::Replace:
+            - 'AWS::StackName': {Ref: 'AWS::StackName'}
+              container: {Ref: ContainerName}
+            - |
+                #!/bin/bash -v
+                yum update -y
+                /usr/bin/cfn-init -s AWS::StackName -r SwiftClient 
+
+                # openstack clients
+                pip install python-keystoneclient python-swiftclient
+                
+                #quick demo of usage
+                source /home/ec2-user/nectarrc.sh
+                swift list container
