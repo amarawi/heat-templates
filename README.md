@@ -8,6 +8,17 @@ services or install packages. Some commands have different paths on
 Ubuntu (not yet supported by NeCTAR official image) and Red Hat like 
 operating systems. So consult relevant templates.
 
+###How to use them
+[Barebone](Barebone.yaml) is used to provide very essiential parts of a normal Heat template. 
+
+When services need to be enable or ensured, [Fedora](Fedora_Barebone.yaml) and [CentOS](CentOS_Barebone.yaml) are different.
+
+With above skeleton, adding diffent parts to a template:
+* [volume storage](Volume_CreateAttach.yaml)
+* [cron job](Cronjob.yaml)
+* [swifth client](Swift_Client.yaml)
+* [manage config during the start-up](Configsets.yaml)
+
 ###Note 
 
 For all templates with volume involvement, either it is 
