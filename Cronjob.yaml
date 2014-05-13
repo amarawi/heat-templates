@@ -1,0 +1,88 @@
+HeatTemplateFormatVersion: '2012-12-12'
+
+Description: >
+ A bare bone instance using any NeCTAR CentOS image supports 
+ cnf-tools. This is a snippet for creating cron job.
+
+Parameters:
+  ImageId:
+    Description: Any NeCTAR image ID. Check default ID if failed to create.
+    Type: String
+    Default: 96761a90-635b-4718-8deb-f4ff57632db4 
+  InstanceType: 
+    Description: OpenStack instance type
+    Type: String
+    ConstraintDescription: must be a valid OpenStack instance type.
+    AllowedValues: ['m1.small', 'm1.medium', 'm1.large']
+    Default: m1.small
+  KeyName: 
+    Description: Name of an existing OpenStack KeyPair to enable SSH access to the instances.
+    Type: String
+    ConstraintDescription: can contain only alphanumeric characters, dashes and underscores.
+    AllowedPattern: '[-_ a-zA-Z0-9]*'
+    MaxLength: 64
+    MinLength: 1
+  Minute:
+    Description: Minute(s) to run job.
+    Type: String
+    ConstraintDescription: can contain only alphanumeric characters, forward slash, comma
+    AllowedPattern: '[-*0-9/,]+'
+    Default: '*'
+  Hour:
+    Description: Hour(s) to run job.
+    Type: String
+    ConstraintDescription: can contain only alphanumeric characters, forward slash, comma
+    AllowedPattern: '[-*0-9/,]+'
+    Default: '*'
+  DayofMonth:
+    Description: Day(s) of month to run job.
+    Type: String
+    ConstraintDescription: can contain only alphanumeric characters, forward slash, comma
+    AllowedPattern: '[-*0-9/,]+'
+    Default: '*'
+  Month:
+    Description: Month(es) to run job.
+    Type: String
+    ConstraintDescription: can contain only alphanumeric characters, forward slash, comma
+    AllowedPattern: '[-*0-9/,]+'
+    Default: '*'
+  Weekday:
+    Description: Weekday(s) to run job.
+    Type: String
+    ConstraintDescription: can contain only alphanumeric characters, forward slash, comma
+    AllowedPattern: '[-0-6*,]+'
+    Default: '*'
+  Command:
+    Description: A shell command
+    Type: String
+  
+Resources:
+  SecurityGroups:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access
+      SecurityGroupIngress:
+      - {IpProtocol: tcp, FromPort: '22', ToPort: '22', CidrIp: 0.0.0.0/0}
+  Barebone:
+    Type: AWS::EC2::Instance
+    Properties: 
+      ImageId: {Ref: ImageId}
+      InstanceType: {Ref: InstanceType}
+      KeyName: {Ref: KeyName}
+      SecurityGroups: [{Ref: SecurityGroups}]
+      UserData: 
+        Fn::Base64: 
+           Fn::Replace:
+            - minute: {Ref: Minute}
+              hour: {Ref: Hour}
+              day_of_month: {Ref: DayofMonth}
+              month: {Ref: Month}
+              weekday: {Ref: Weekday}
+              command: {Ref: Command}
+            - |
+                #!/bin/bash -v
+                (crontab -l; echo "minute hour day_of_month month weekday command") | crontab
+Outputs:
+  Instance_IP:
+    Description: The IP address of the deployed instance. SSH in with your key.
+    Value: {'Fn::GetAtt': [Barebone, PublicIp]}
