@@ -44,6 +44,11 @@ Parameters:
     MaxLength: 64
     MinLength: 1
     Type: String
+  MyIPs: 
+    AllowedPattern: '[0-9./:]*'
+    ConstraintDescription: can contain only alphanumeric characters, dot, forward slash and colon.
+    Description: IP or IP range to access phpPgAdmin.
+    Type: String
 Resources: 
   DBServerSecurityGroup: 
     Type: AWS::EC2::SecurityGroup
@@ -57,6 +62,11 @@ Resources:
           ToPort: '22'
         - 
           CidrIp: 0.0.0.0/0
+          FromPort: '80'
+          IpProtocol: tcp
+          ToPort: '80'
+        - 
+          CidrIp: 0.0.0.0/0
           FromPort: '5432'
           IpProtocol: tcp
           ToPort: '5432'
@@ -67,8 +77,9 @@ Resources:
         config: 
           packages: 
             yum: 
-              postgresql: []
+              postgresql:        []
               postgresql-server: []
+              phpPgAdmin:        []
     Properties: 
       ImageId: 
         Ref: ImageId
@@ -83,6 +94,7 @@ Resources:
             - AWS::StackName: {Ref: 'AWS::StackName'}
               dbpassword: {Ref: DBPassword}
               dbusername: {Ref: DBUsername}
+              accessIP: { Ref: MyIPs}
             - |
                 #!/bin/bash -v
                 yum update -y
@@ -94,8 +106,13 @@ Resources:
                 sudo wget --no-check-certificate -N https://raw.githubusercontent.com/eResearchSA/heat-templates/master/postgresql/postgresql.conf -P /var/lib/pgsql/data/
                 sudo service postgresql restart
                 sudo -u postgres psql -c "CREATE USER dbusername WITH SUPERUSER ENCRYPTED PASSWORD 'dbpassword';"
+                
+                sed -i 's@::1@accessIP@' /etc/httpd/conf.d/phpPgAdmin.conf
+                sed -i "s/\$conf\['servers'\]\[0\]\['host'\] = '';/\$conf['servers'][0]['host'] = '127.0.0.1';/" /etc/phpPgAdmin/config.inc.php
+                sed -i "s/\['defaultdb'\] = 'template1'/['defaultdb'] = 'postgres'/" /etc/phpPgAdmin/config.inc.php
+                service httpd restart
 Outputs: 
-  AccessURL: 
+  AccessCommand: 
     Description: 'The database can be accessed at: '
     Value: 
       Fn::Join: 
@@ -108,3 +125,14 @@ Outputs:
           - -U
           - Ref : DBUsername
           - -d postgres
+  ManageURL: 
+    Description: 'phpPgAdmin can be accessed at: '
+    Value: 
+      Fn::Join: 
+        - ''
+        - 
+          - http://
+          - Fn::GetAtt: 
+              - DatabaseServer
+              - PublicIp
+          - /phpPgAdmin/
