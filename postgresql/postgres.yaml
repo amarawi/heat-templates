@@ -1,7 +1,7 @@
 HeatTemplateFormatVersion: 2012-12-12
 Description: >
   Create a PostgreSQL database server using a CentOS image. It only
-  creates a superuser and disables the login of posgres from remote
+  creates a superuser and disables the login of postgres from remote
   machinces. The version of PostgreSQL depends on the yum
   repository. It will create a security group so make sure there is
   enough allocation of security group. User can login to the server

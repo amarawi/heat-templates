@@ -30,3 +30,7 @@ make sure volumes are:
 before the deletion. Fail to do so, the file system can be 
 corrupted. OpenStack Heat helpers do not take care of these yet 
 (Havana).
+
+###Warning
+
+Most templates are for demonstration. Therefore, they are very basic. So please check if the configuration suits to your needs especially *security*.

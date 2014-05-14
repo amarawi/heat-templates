@@ -1,11 +1,13 @@
 HeatTemplateFormatVersion: 2012-12-12
 Description: >
   Create a PostgreSQL database server using a CentOS image. It only
-  creates a superuser and disables the login of posgres from remote
+  creates a superuser and disables the login of postgres from remote
   machinces. The version of PostgreSQL depends on the yum
   repository. It will create a security group so make sure there is
   enough allocation of security group. User can login to the server
-  through ssh using their NeCTAR key.
+  through ssh using their NeCTAR key. It also has phpPgAdmin installed 
+  and configed only certain IPs can access phpPgAdmin's web interface.
+  The security setting is minimal. DO NOT USE IN PRODUCTION.
 Parameters: 
   DBUsername: 
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
@@ -47,13 +49,13 @@ Parameters:
   MyIPs: 
     AllowedPattern: '[0-9./:]*'
     ConstraintDescription: can contain only alphanumeric characters, dot, forward slash and colon.
-    Description: IP or IP range to access phpPgAdmin.
+    Description: IP or IP range to access phpPgAdmin. Can be a full/partial IP address, a network/netmask pair or a network/nnn CIDR specification
     Type: String
 Resources: 
   DBServerSecurityGroup: 
     Type: AWS::EC2::SecurityGroup
     Properties: 
-      GroupDescription: Enable SSH access, postgreSQL assess at port 5432
+      GroupDescription: Enable SSH, HTTP and postgreSQL(port 5432) assesses 
       SecurityGroupIngress: 
         - 
           CidrIp: 0.0.0.0/0
@@ -80,6 +82,10 @@ Resources:
               postgresql:        []
               postgresql-server: []
               phpPgAdmin:        []
+          services: 
+            sysvinit: 
+              postgresql: { enabled: true }
+              httpd:  { enabled: true, ensureRunning: true}
     Properties: 
       ImageId: 
         Ref: ImageId
@@ -107,7 +113,9 @@ Resources:
                 sudo service postgresql restart
                 sudo -u postgres psql -c "CREATE USER dbusername WITH SUPERUSER ENCRYPTED PASSWORD 'dbpassword';"
                 
-                sed -i 's@::1@accessIP@' /etc/httpd/conf.d/phpPgAdmin.conf
+                #set up which IPs can access /phpPgAdmin
+                sed -i 's@127.0.0.1@accessIP@' /etc/httpd/conf.d/phpPgAdmin.conf
+                #make phpPgAdmin bind to 127.0.0.1 and use default db postgres
                 sed -i "s/\$conf\['servers'\]\[0\]\['host'\] = '';/\$conf['servers'][0]['host'] = '127.0.0.1';/" /etc/phpPgAdmin/config.inc.php
                 sed -i "s/\['defaultdb'\] = 'template1'/['defaultdb'] = 'postgres'/" /etc/phpPgAdmin/config.inc.php
                 service httpd restart

@@ -21,7 +21,7 @@ service mysqld start
 
 ### Use [mysqldump](http://dev.mysql.com/doc/refman/5.5/en/mysqldump.html)
 
-This backup method use SQL statements to backup and resotre.
+This backup method use SQL statements to backup and restore.
 
 ```shell
 # to backup 
@@ -31,3 +31,9 @@ mysqldump db_name | gzip > db_name.gz
 mysqladmin create -uroot -ppass db_name
 gunzip < db_name.gz | mysql -uroot -ppass db_name
 ```
+
+### Manage database through web interface
+
+[mysql_phpMyAdmin.yaml](mysql_phpMyAdmin.yaml) creates a MySQL database server with root account's password set when a VM is created.
+The configuration of phpMyAdmin is very simple and with convenience in mind. It allows the access from permitted IP or range. It uses
+root and password to connect the database server. `['auth_type'] = 'config'`. Read the [documentation](http://docs.phpmyadmin.net/en/latest/index.html) for detail.

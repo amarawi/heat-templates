@@ -4,13 +4,16 @@ Description: >
   user root and with the password you choose. The version of MySQL 
   depends on the yum repository. It will create a security group so 
   make sure there is enough allocation of security group. User can 
-  login to the server through ssh using their NeCTAR key.
+  login to the server through ssh using their NeCTAR key. It also 
+  has phpMyAdmin installed and configed only certain IPs can access 
+  phpMyAdmin's web interface. The security setting is minimal. DO 
+  NOT USE IN PRODUCTION.
 Parameters: 
   InstanceType: 
     Description: MySQL database server
     Type: String
-    Default: "m1.small"
-    AllowedValues: ['m1.tiny', 'm1.small', 'm1.medium', 'm1.large']
+    Default: m1.small
+    AllowedValues: [m1.tiny, m1.small, m1.medium, m1.large]
     ConstraintDescription: must be a valid nova instance type.
   ImageId:
    # For all NeCTAR images, only this image works with service command 
@@ -35,17 +38,27 @@ Parameters:
     MaxLength: 41
     AllowedPattern: '[a-zA-Z0-9]*'
     ConstraintDescription: must contain only alphanumeric characters.
+  MyIPs: 
+    AllowedPattern: '[0-9./:]*'
+    ConstraintDescription: can contain only alphanumeric characters, dot, forward slash and colon.
+    Description: IP or IP range to access phpPgAdmin. Can be a full/partial IP address, a network/netmask pair or a network/nnn CIDR specification
+    Type: String
 Resources:
   DBServerSecurityGroup: 
     Type: AWS::EC2::SecurityGroup
     Properties: 
-      GroupDescription: Enable SSH access, MySQL assess at port 3306
+      GroupDescription: Enable SSH, HTTP and MySQL(port 3306) assesses
       SecurityGroupIngress: 
         - 
           CidrIp: 0.0.0.0/0
           FromPort: '22'
           IpProtocol: tcp
           ToPort: '22'
+        - 
+          CidrIp: 0.0.0.0/0
+          FromPort: '80'
+          IpProtocol: tcp
+          ToPort: '80'
         - 
           CidrIp: 0.0.0.0/0
           FromPort: '3306'
@@ -58,16 +71,17 @@ Resources:
         config: 
           packages: 
             yum: 
-              mysql: []
+              mysql:        []
               mysql-server: []
+              httpd:        []
+              phpMyAdmin:   []
           files:
             /home/ec2-user/my.cnf:
               source: https://raw.githubusercontent.com/eResearchSA/heat-templates/master/mysql/my.cnf
           services: 
             sysvinit: 
-              mysqld: 
-                enabled: true
-                ensureRunning: true
+              mysqld: { enabled: true, ensureRunning: true}
+              httpd:  { enabled: true }
     Properties: 
       ImageId: 
         Ref: ImageId
@@ -81,6 +95,7 @@ Resources:
            Fn::Replace:
             - AWS::StackName: {Ref: 'AWS::StackName'}
               dbrootpwd: {Ref: DBRootPassword}
+              accessIP: { Ref: MyIPs}
             - |
                 #!/bin/bash -v
                 yum update -y
@@ -96,6 +111,14 @@ Resources:
 
                 cp /home/ec2-user/my.cnf /etc/my.cnf
                 service mysqld restart
+
+                # allow to access url
+                sed -i 's/127.0.0.1/accessIP/g' /etc/httpd/conf.d/phpMyAdmin.conf
+                # connect to local mysql server
+                sed -i "s/\['auth_type'\][ tab]\+=.*;/['auth_type'] = 'config';/" /etc/phpMyAdmin/config.inc.php
+                sed -i "s/\['user'\][ tab]\+=.*;/['user'] = 'root';/" /etc/phpMyAdmin/config.inc.php
+                sed -i "s/\['password'\][ tab]\+=.*;/['password'] = 'dbrootpwd';/" /etc/phpMyAdmin/config.inc.php
+                service httpd start
 Outputs: 
   AccessURL: 
     Description: 'The database can be access at: '
@@ -108,3 +131,14 @@ Outputs:
           - Fn::GetAtt: 
               - DatabaseServer
               - PublicIp
+  ManageURL: 
+    Description: 'phpMyAdmin can be accessed at: '
+    Value: 
+      Fn::Join: 
+        - ''
+        - 
+          - http://
+          - Fn::GetAtt: 
+              - DatabaseServer
+              - PublicIp
+          - /phpMyAdmin/
