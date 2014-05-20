@@ -18,6 +18,8 @@ With above skeleton, adding diffent parts to a template:
 * [cron job](Cronjob.yaml)
 * [swifth client](Swift_Client.yaml)
 * [manage config during the start-up](Configsets.yaml)
+* [create a XFCE desktop environment](XFCE.yaml). This template also can be used to compare the supports to XFCE by different distros.
+* [create a Fedora XFCE spin](Fedora_XFCE.yaml)
 
 ###Note 
 
@@ -33,4 +35,6 @@ corrupted. OpenStack Heat helpers do not take care of these yet
 
 ###Warning
 
-Most templates are for demonstration. Therefore, they are very basic. So please check if the configuration suits to your needs especially *security*.
+Most templates are for demonstration. Therefore, they are very 
+basic. So please check if the configuration suits to your needs 
+especially *security*.

@@ -11,7 +11,7 @@ Parameters:
     Description: OpenStack instance type
     Type: String
     ConstraintDescription: must be a valid OpenStack instance type.
-    AllowedValues: [m1.tiny, m1.small]
+    AllowedValues: [m1.small, m1.medium]
     Default: m1.small
   KeyName: 
     Description: Name of an existing OpenStack KeyPair to enable SSH access to the instances.
@@ -29,8 +29,9 @@ Resources:
         config: 
           packages: 
             yum: 
-              x2goserver : [] 
-              firefox    : [] 
+              x2goserver           : [] 
+              xorg-x11-fonts-Type1 : []
+              firefox              : [] 
     Properties: 
       ImageId: {Ref: ImageId}
       InstanceType: {Ref: InstanceType}

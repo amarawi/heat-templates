@@ -43,15 +43,18 @@ Resources:
       AWS::CloudFormation::Init: 
         configSets:
           rh: [ rh ]
-          centos: [ rh ]
+          centos: [ rh, centos ]
           ubuntu: [ ubuntu ] 
         rh: 
           packages: 
             yum: 
               x2goserver           : [] 
-              x2goserver-xsession  : [] 
               firefox              : []
               xorg-x11-fonts-Type1 : []
+        centos: 
+          packages: 
+            yum: 
+              x2goserver-xsession  : [] 
         ubuntu: 
           packages: 
             apt:
