@@ -18,7 +18,7 @@ With above skeleton, adding diffent parts to a template:
 * [cron job](Cronjob.yaml)
 * [swifth client](Swift_Client.yaml)
 * [manage config during the start-up](Configsets.yaml)
-* [create a XFCE desktop environment](XFCE.yaml). This template also can be used to compare the supports to XFCE by different distros.
+* [create a XFCE desktop environment](XFCE4.yaml). This template also can be used to compare the supports to XFCE by different distros.
 * [create a Fedora XFCE spin](Fedora_XFCE.yaml)
 
 ###Note 
