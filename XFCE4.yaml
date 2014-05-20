@@ -30,6 +30,11 @@ Parameters:
     Type: String
     AllowedValues: [CentOS, Fedora, Ubuntu]
     Default: Fedora
+  AvailabilityZone:
+    Description: Where to host the instance.
+    Type: String
+    AllowedValues: [melbourne, melbourne-qh2, monash, sa, NCI]
+    Default: melbourne-qh2
 
 Resources:
   XFCE:
@@ -38,18 +43,15 @@ Resources:
       AWS::CloudFormation::Init: 
         configSets:
           rh: [ rh ]
-          centos: [ extra, rh ]
+          centos: [ rh ]
           ubuntu: [ ubuntu ] 
         rh: 
           packages: 
             yum: 
-              x2goserver          : [] 
-              x2goserver-xsession : [] 
-              firefox             : []
-        extra: 
-          packages: 
-            yum: 
-              perl-DBD-SQLite     : [] 
+              x2goserver           : [] 
+              x2goserver-xsession  : [] 
+              firefox              : []
+              xorg-x11-fonts-Type1 : []
         ubuntu: 
           packages: 
             apt:
@@ -65,6 +67,7 @@ Resources:
       InstanceType: {Ref: InstanceType}
       KeyName: {Ref: KeyName}
       SecurityGroups: [ default ]
+      AvailabilityZone: {Ref: AvailabilityZone}
       UserData: 
         Fn::Base64: 
            Fn::Replace:
