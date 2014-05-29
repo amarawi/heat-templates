@@ -1,10 +1,9 @@
 HeatTemplateFormatVersion: 2012-12-12
 
 Description: >
-  XFCE desktop server using x2go on any cfn-tools enabled image. In 
-  May 2014, ECDSA is not implemented in libssh2, therefore if in 
-  known_hosts there is an entry of ECDSA fingerprint, x2go client 
-  will fail to connect.
+  XFCE desktop server using x2go on any cfn-tools enabled image. Until 
+  May 2014, x2go client uses old format to store key in known_hosts. 
+  So better let it connect first to avoid uncessary confusion.
 Parameters:
 ## No NeCTAR ubuntu image has cfn-tools supprts
   ImageId:
@@ -61,10 +60,11 @@ Resources:
               x2goserver          : [] 
               x2goserver-xsession : [] 
               xfce4               : []
-              xfce4-goodies       : [] 
+              xfce4-terminal      : [] 
               xfce4-artwork       : []
               xubuntu-icon-theme  : []
-              firefox             : [] 
+              firefox             : []
+               
     Properties: 
       ImageId: {Ref: ImageId}
       InstanceType: {Ref: InstanceType}
@@ -88,8 +88,9 @@ Resources:
                 cfn-init -s AWS::StackName -r XFCE -c config
                 if [ config == 'centos' ]; then
                   service x2gocleansessions start
-                fi  
+                fi
+                  
 Outputs:
   Instance_IP:
-    Description: Use x2go client to access remote desktop or ssh in. But remember use x2go client first.
+    Description: Use x2go client to access remote desktop or ssh in. But remember to use x2go client first just in case there is SSH key issue.
     Value: {'Fn::GetAtt': [XFCE, PublicIp]}
