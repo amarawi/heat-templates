@@ -1,7 +1,8 @@
 HeatTemplateFormatVersion: 2012-12-12
 
 Description: >
-  RStudio server. More info: http://www.rstudio.com/
+  RStudio Server: the premier integrated development environment for 
+  R runs over the web. More info: http://www.rstudio.com/
 Parameters:
 ## No NeCTAR ubuntu image has cfn-tools supprts
   ImageId:
@@ -27,7 +28,7 @@ Parameters:
     AllowedValues: [CentOS, Ubuntu]
     Default: CentOS
   AvailabilityZone:
-    Description: Where to host the instance.
+    Description: Where to host the instance. If you want to access volume storage, this has to be the zone where the volume is.
     Type: String
     AllowedValues: [melbourne, melbourne-qh2, monash, sa, NCI]
     Default: melbourne-qh2

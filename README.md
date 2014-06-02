@@ -1,7 +1,8 @@
 heat-templates
 ==============
 
-OpenStack Heat templates for use on the [NeCTAR](http://nectar.org.au/) cloud.
+OpenStack Heat templates for use on the 
+[NeCTAR](http://nectar.org.au/) cloud for creating your own templates.
 
 ###What are they for
 If you are just interested in installing packages, creating users, Heat
@@ -29,6 +30,18 @@ With above skeleton, adding diffent parts to a template:
 * [manage config during the start-up](Configsets.yaml)
 * [create a XFCE desktop environment](XFCE4.yaml). This template also can be used to compare the supports to XFCE by different distros.
 * [create a Fedora XFCE spin](Fedora_XFCE4.yaml)
+* [R on web](RStudio-Server.yaml)
+* [R-IDE on remote desktop](RStudio-Desktop-XFCE4.yaml)
+
+The client tool for connecting remote XFCE desktop environment is 
+[X2go](http://wiki.x2go.org/doku.php) client. It runs on Linux, 
+Windows and Mac. It only uses SSH for the connection so it is secure 
+and simple to set up. Download it from 
+[here](http://wiki.x2go.org/doku.php/doc:installation:x2goclient). 
+By default SSH with password is not configured. So it is a good 
+idea, at the fisrt time of login to disable screen saver, power 
+saving or other settings which will log you out after a certain time 
+of idling.
 
 ###Note 
 

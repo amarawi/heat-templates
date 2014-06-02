@@ -50,6 +50,7 @@ Resources:
               x2goserver           : [] 
               firefox              : []
               xorg-x11-fonts-Type1 : []
+              mousepad             : []
         centos: 
           packages: 
             yum: 
@@ -64,6 +65,7 @@ Resources:
               xfce4-artwork       : []
               xubuntu-icon-theme  : []
               firefox             : []
+              mousepad             : []
                
     Properties: 
       ImageId: {Ref: ImageId}
@@ -87,10 +89,11 @@ Resources:
                 fi
                 cfn-init -s AWS::StackName -r XFCE -c config
                 if [ config == 'centos' ]; then
+                  usermod -a -G fuse ec2-user # to enable sshfs mount as CentOS 6.5 still has the older version of fusermount
                   service x2gocleansessions start
                 fi
                   
 Outputs:
   Instance_IP:
-    Description: Use x2go client to access remote desktop or ssh in. But remember to use x2go client first just in case there is SSH key issue.
+    Description: Use x2go client to access remote desktop or ssh in:
     Value: {'Fn::GetAtt': [XFCE, PublicIp]}

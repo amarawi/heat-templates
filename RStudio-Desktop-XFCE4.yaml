@@ -1,0 +1,126 @@
+HeatTemplateFormatVersion: 2012-12-12
+
+Description: >
+  RStudio IDE: the premier integrated development environment for 
+  R runs on XFCE4 desktop. More info: http://www.rstudio.com/.
+  You connect RStudio IDE using x2go client. It can be downloaded at:
+  http://wiki.x2go.org/doku.php/doc:installation:x2goclient. Both CentOS
+  and Ubuntu are used to support stable releases. You make a choice based on 
+  your own OS favourite. Fedora is used to try out the latest version comes
+  from RStudio's daily builds. The security group is default: only SSH is 
+  allowed.
+Parameters:
+## No NeCTAR ubuntu image has cfn-tools supprts
+  ImageId:
+    Description: Any NeCTAR image ID. The image has to have cfn-tools intalled. Defaut is NeCTAR CentOS 6.5.
+    Type: String
+    Default: 96761a90-635b-4718-8deb-f4ff57632db4
+  InstanceType: 
+    Description: OpenStack instance type
+    Type: String
+    ConstraintDescription: must be a valid OpenStack instance type.
+    AllowedValues: [m1.small, m1.medium]
+    Default: m1.small
+  KeyName: 
+    Description: Name of an existing OpenStack KeyPair to enable SSH access to the instances.
+    Type: String
+    ConstraintDescription: can contain only alphanumeric characters, dashes and underscores.
+    AllowedPattern: '[-_ a-zA-Z0-9]*'
+    MaxLength: 64
+    MinLength: 1
+  Distro: 
+  #  It affects package management, service control and etc.  
+    Description: Name of Linux distribution of the image.
+    Type: String
+    AllowedValues: [CentOS, Ubuntu, Fedora]
+    Default: CentOS
+  AvailabilityZone:
+    Description: Where to host the instance. If you want to access volume storage, this has to be the zone where the volume is.
+    Type: String
+    AllowedValues: [melbourne, melbourne-qh2, monash, sa, NCI]
+    Default: melbourne-qh2
+  Version:
+    Description: >
+     The release version of RStudio. Check on RStudio's website. 
+     Note: on May 30, 2014 there is no release supports Fedora 20. So we 
+     get 0.98.872 from daily builds server at the time of writing.
+    Type: String
+    AllowedPattern: '\d+\.\d+\.\d+'
+    Default: 0.98.507
+
+Resources:
+  RStudio:
+    Type: AWS::EC2::Instance
+    Metadata: 
+      AWS::CloudFormation::Init: 
+        configSets:
+          fedora: [ fedora ]
+          centos: [ fedora, centos ]
+          ubuntu: [ ubuntu ] 
+        fedora: 
+          packages: 
+            yum: 
+              x2goserver           : [] 
+              firefox              : []
+              xorg-x11-fonts-Type1 : []
+              R                    : [] 
+              mousepad             : []
+        centos: 
+          packages: 
+            yum: 
+              x2goserver-xsession  : [] 
+        ubuntu: 
+          packages: 
+            apt:
+              x2goserver          : [] 
+              x2goserver-xsession : [] 
+              xfce4               : []
+              xfce4-terminal      : [] 
+              xfce4-artwork       : []
+              xubuntu-icon-theme  : []
+              firefox             : []
+              r-base              : []
+              gdebi-core          : []
+               
+    Properties: 
+      ImageId: {Ref: ImageId}
+      InstanceType: {Ref: InstanceType}
+      KeyName: {Ref: KeyName}
+      SecurityGroups: [ default ]
+      AvailabilityZone: {Ref: AvailabilityZone}
+      UserData: 
+        Fn::Base64: 
+           Fn::Replace:
+            - AWS::StackName: {Ref: 'AWS::StackName'}
+              config: { "Fn::Select" : [ {Ref: Distro}, {CentOS: centos, Ubuntu: ubuntu, Fedora: fedora} ] }
+              version: {Ref: Version} 
+            - |
+                #!/bin/bash -v
+                if [ config == 'ubuntu' ]; then
+                  apt-add-repository -y ppa:x2go/stable
+                  apt-get update
+                else
+                  yum -y update
+                  yum -y install @xfce # group installation
+                fi
+                cfn-init -s AWS::StackName -r RStudio -c config
+
+                case config in
+                  centos)
+                      service x2gocleansessions start
+                      usermod -a -G fuse ec2-user # to enable sshfs mount as CentOS 6.5 still has the older version of fusermount
+                      yum -y install http://download1.rstudio.org/rstudio-version-x86_64.rpm
+                      ;;
+                  ubuntu)
+                      wget http://download1.rstudio.org/rstudio-version-amd64.deb
+                      gdebi -n rstudio-version-amd64.deb
+                      ;;
+                  fedora)
+                      yum -y install https://s3.amazonaws.com/rstudio-dailybuilds/rstudio-version-x86_64.rpm
+                      ;;
+                esac          
+                  
+Outputs:
+  Instance_IP:
+    Description: Use x2go client to access remote R IDE.
+    Value: {'Fn::GetAtt': [RStudio, PublicIp]}
