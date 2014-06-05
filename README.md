@@ -20,7 +20,7 @@ supported by NeCTAR official image) to Red Hat like operating systems.
 So consult relevant templates.
 
 ###How to use them
-[Barebone](Barebone.yaml) is used to provide very essiential parts of a normal Heat template. 
+[Barebone](Barebone.yaml) is used to provide very essential parts of a normal Heat template. 
 
 With above skeleton, adding diffent parts to a template:
 * manage services: [Fedora](Fedora_Barebone.yaml) or [CentOS](CentOS_Barebone.yaml) 
@@ -39,7 +39,7 @@ Windows and Mac. It only uses SSH for the connection so it is secure
 and simple to set up. Download it from 
 [here](http://wiki.x2go.org/doku.php/doc:installation:x2goclient). 
 By default SSH with password is not configured. So it is a good 
-idea, at the fisrt time of login to disable screen saver, power 
+idea, at the first time of login to disable screen saver, power 
 saving or other settings which will log you out after a certain time 
 of idling.
 
@@ -48,7 +48,7 @@ of idling.
 For all templates with volume involvement, either it is 
 mounting an existing or keeping volume after a stack is deleted, 
 make sure volumes are: 
-* umounted 
+* unmounted 
 * de-attached
 
 before the deletion. Fail to do so, the file system can be 

@@ -49,6 +49,7 @@ Resources:
               firefox              : []
               xorg-x11-fonts-Type1 : []
               mousepad             : []
+              xarchiver            : []    
         centos: 
           packages: 
             yum: 
@@ -56,14 +57,16 @@ Resources:
         ubuntu: 
           packages: 
             apt:
-              x2goserver          : [] 
-              x2goserver-xsession : [] 
-              xfce4               : []
-              xfce4-terminal      : [] 
-              xfce4-artwork       : []
-              xubuntu-icon-theme  : []
-              firefox             : []
-              mousepad             : []
+              x2goserver            : [] 
+              x2goserver-xsession   : [] 
+              xfce4                 : []
+              xfce4-terminal        : [] 
+              xfce4-artwork         : []
+              xubuntu-icon-theme    : []
+              firefox               : []
+              mousepad              : []
+              thunar-archive-plugin : []
+              xarchiver             : []
                
     Properties: 
       ImageId: {Ref: ImageId}
