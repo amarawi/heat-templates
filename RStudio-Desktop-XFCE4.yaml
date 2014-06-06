@@ -39,9 +39,18 @@ Parameters:
     Type: String
     AllowedValues: [melbourne, melbourne-qh2, monash, sa, NCI]
     Default: melbourne-qh2
+  Build:
+    Description: >
+     Choose what type of build: can either be stable release or daily build.
+     Note: since May 2014 there is no release supports Fedora 20 and CentOS 6.5 with R 3.1.0.
+     So on such systems, choose daily build.
+    Type: String
+    AllowedValues: [Daily, Stable]
+    Default: Stable
   Version:
     Description: >
-     The release version of RStudio. Check on RStudio's website. 
+     The version of RStudio. Check on RStudio's website to match with release or build. 
+     The default value is the latest stable release version.
      Note: on May 30, 2014 there is no release supports Fedora 20. So we 
      get 0.98.872 from daily builds server at the time of writing.
     Type: String
@@ -93,6 +102,7 @@ Resources:
            Fn::Replace:
             - AWS::StackName: {Ref: 'AWS::StackName'}
               config: { "Fn::Select" : [ {Ref: Distro}, {CentOS: centos, Ubuntu: ubuntu, Fedora: fedora} ] }
+              repourl: { "Fn::Select" : [ {Ref: Build}, {Daily: 'https://s3.amazonaws.com/rstudio-dailybuilds' , Stable: 'http://download1.rstudio.org' } ] }
               version: {Ref: Version} 
             - |
                 #!/bin/bash -v
@@ -109,18 +119,19 @@ Resources:
                   centos)
                       service x2gocleansessions start
                       usermod -a -G fuse ec2-user # to enable sshfs mount as CentOS 6.5 still has the older version of fusermount
-                      yum -y install http://download1.rstudio.org/rstudio-version-x86_64.rpm
+                      #yum -y install repourl/rstudio-version-x86_64.rpm
+                      yum -y install --nogpgcheck repourl/rstudio-version-x86_64.rpm
                       ;;
                   ubuntu)
-                      wget http://download1.rstudio.org/rstudio-version-amd64.deb
+                      wget repourl/rstudio-version-amd64.deb
                       gdebi -n rstudio-version-amd64.deb
                       ;;
                   fedora)
-                      yum -y install https://s3.amazonaws.com/rstudio-dailybuilds/rstudio-version-x86_64.rpm
+                      yum -y install --nogpgcheck repourl/rstudio-version-x86_64.rpm
                       ;;
                 esac          
                   
 Outputs:
   Instance_IP:
-    Description: Use x2go client to access remote R IDE.
+    Description: Use X2Go client to access remote R IDE.
     Value: {'Fn::GetAtt': [RStudio, PublicIp]}
