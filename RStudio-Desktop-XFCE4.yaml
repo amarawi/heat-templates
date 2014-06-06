@@ -3,18 +3,16 @@ HeatTemplateFormatVersion: 2012-12-12
 Description: >
   RStudio IDE: the premier integrated development environment for 
   R runs on XFCE4 desktop. More info: http://www.rstudio.com/.
-  You connect RStudio IDE using x2go client. It can be downloaded at:
-  http://wiki.x2go.org/doku.php/doc:installation:x2goclient. Both CentOS
-  and Ubuntu are used to support stable releases. You make a choice based on 
-  your own OS favourite. Fedora is used to try out the latest version comes
-  from RStudio's daily builds. The security group is default: only SSH is 
-  allowed.
+  You connect RStudio IDE using X2Go client. It can be downloaded at:
+  http://wiki.x2go.org/doku.php/doc:installation:x2goclient. Try RStudio's
+  daily builds for the latest otherwise pick stable release. The security
+  group is default: only SSH is allowed.
 Parameters:
 ## No NeCTAR ubuntu image has cfn-tools supprts
   ImageId:
-    Description: Any NeCTAR image ID. The image has to have cfn-tools intalled. Defaut is NeCTAR CentOS 6.5.
+    Description: Any NeCTAR image ID. The image has to have cfn-tools intalled. Defaut is NeCTAR Fedora 20.
     Type: String
-    Default: 96761a90-635b-4718-8deb-f4ff57632db4
+    Default: 249167f4-3d45-402a-9362-557c23628352
   InstanceType: 
     Description: OpenStack instance type
     Type: String
@@ -32,21 +30,21 @@ Parameters:
   #  It affects package management, service control and etc.  
     Description: Name of Linux distribution of the image.
     Type: String
-    AllowedValues: [CentOS, Ubuntu, Fedora]
-    Default: CentOS
+    AllowedValues: [Ubuntu, Fedora]
+    Default: Fedora
   AvailabilityZone:
     Description: Where to host the instance. If you want to access volume storage, this has to be the zone where the volume is.
     Type: String
     AllowedValues: [melbourne, melbourne-qh2, monash, sa, NCI]
-    Default: melbourne-qh2
+    Default: NCI
   Build:
     Description: >
      Choose what type of build: can either be stable release or daily build.
-     Note: since May 2014 there is no release supports Fedora 20 and CentOS 6.5 with R 3.1.0.
+     Note: since May 2014 there is no release supports Fedora 20 with R 3.1.0.
      So on such systems, choose daily build.
     Type: String
     AllowedValues: [Daily, Stable]
-    Default: Stable
+    Default: Daily
   Version:
     Description: >
      The version of RStudio. Check on RStudio's website to match with release or build. 
@@ -55,7 +53,6 @@ Parameters:
      get 0.98.872 from daily builds server at the time of writing.
     Type: String
     AllowedPattern: '\d+\.\d+\.\d+'
-    Default: 0.98.507
 
 Resources:
   RStudio:
@@ -64,7 +61,6 @@ Resources:
       AWS::CloudFormation::Init: 
         configSets:
           fedora: [ fedora ]
-          centos: [ fedora, centos ]
           ubuntu: [ ubuntu ] 
         fedora: 
           packages: 
@@ -74,10 +70,6 @@ Resources:
               xorg-x11-fonts-Type1 : []
               R                    : [] 
               mousepad             : []
-        centos: 
-          packages: 
-            yum: 
-              x2goserver-xsession  : [] 
         ubuntu: 
           packages: 
             apt:
@@ -101,7 +93,7 @@ Resources:
         Fn::Base64: 
            Fn::Replace:
             - AWS::StackName: {Ref: 'AWS::StackName'}
-              config: { "Fn::Select" : [ {Ref: Distro}, {CentOS: centos, Ubuntu: ubuntu, Fedora: fedora} ] }
+              config: { "Fn::Select" : [ {Ref: Distro}, { Ubuntu: ubuntu, Fedora: fedora} ] }
               repourl: { "Fn::Select" : [ {Ref: Build}, {Daily: 'https://s3.amazonaws.com/rstudio-dailybuilds' , Stable: 'http://download1.rstudio.org' } ] }
               version: {Ref: Version} 
             - |
@@ -116,12 +108,6 @@ Resources:
                 cfn-init -s AWS::StackName -r RStudio -c config
 
                 case config in
-                  centos)
-                      service x2gocleansessions start
-                      usermod -a -G fuse ec2-user # to enable sshfs mount as CentOS 6.5 still has the older version of fusermount
-                      #yum -y install repourl/rstudio-version-x86_64.rpm
-                      yum -y install --nogpgcheck repourl/rstudio-version-x86_64.rpm
-                      ;;
                   ubuntu)
                       wget repourl/rstudio-version-amd64.deb
                       gdebi -n rstudio-version-amd64.deb

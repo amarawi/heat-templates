@@ -55,6 +55,15 @@ before the deletion. Fail to do so, the file system can be
 corrupted. OpenStack Heat helpers do not take care of these yet 
 (Havana).
 
+*R users*
+
+On YUM system, e.g. CentOS, Fedora, since R 3.1.0, the R package 
+does not have libRblas.so and libRlapack.so. It has been reported in a few places: 
+[r-sig-dedora](https://www.mail-archive.com/r-sig-fedora@r-project.org/msg00254.html), 
+or [RStudio](https://support.rstudio.com/hc/communities/public/questions/201046993-Library-dependency-issue-on-Fedora-20-?locale=en-us).
+For RStudio products on such systems, R related templates use daily builds until this 
+problem is solved. 
+
 ###Warning
 
 Most templates are for demonstration. Therefore, they are very 

@@ -31,13 +31,24 @@ Parameters:
     Description: Where to host the instance. If you want to access volume storage, this has to be the zone where the volume is.
     Type: String
     AllowedValues: [melbourne, melbourne-qh2, monash, sa, NCI]
-    Default: melbourne-qh2
+    Default: sa
+  Build:
+    Description: >
+     Choose what type of build: can either be stable release or daily build.
+     Note: since May 2014 there is no release supports Fedora 20 with R 3.1.0.
+     So on such systems, choose daily build.
+    Type: String
+    AllowedValues: [Daily, Stable]
+    Default: Daily
   Version:
-    Description: The version of RStudio. 
+    Description: >
+     The version of RStudio. 
+     Note: since R 3.1.0 release in EPEL in May, 2014 there is no stable release supports CentOS.
+     So this version will be for daily build if CentOS server is chosen. Default is 0.98.894. Other
+     see http://www.rstudio.com/ide/download/preview
     Type: String
     MinLength: 4
     AllowedPattern: '\d+\.\d+\.\d+'
-    Default: 0.98.507
     ConstraintDescription: must be a valid RStudio version. Check on RStudio's website.
   DefaultUser:
     Description: The default login of RStudio. Has no privilege and not allowed to SSH into server.
@@ -101,6 +112,7 @@ Resources:
            Fn::Replace:
             - AWS::StackName: {Ref: 'AWS::StackName'}
               config: { "Fn::Select" : [ {Ref: Distro}, {CentOS: centos, Ubuntu: ubuntu} ] }
+              repourl: { "Fn::Select" : [ {Ref: Build}, {Daily: 'https://s3.amazonaws.com/rstudio-dailybuilds' , Stable: 'http://download2.rstudio.org' } ] }
               version: {Ref: Version} 
               default_user: {Ref: DefaultUser} 
               userpass: {Ref: UserPasswd} 
@@ -116,10 +128,9 @@ Resources:
                 cfn-init -s AWS::StackName -r RStudio -c config
                 cd /tmp
                 if [ config == 'centos' ]; then
-                  wget http://download2.rstudio.org/rstudio-server-version-x86_64.rpm
-                  yum -y install --nogpgcheck rstudio-server-version-x86_64.rpm
+                  yum -y install --nogpgcheck repourl/rstudio-server-version-x86_64.rpm
                 else
-                  wget http://download2.rstudio.org/rstudio-server-version-amd64.deb
+                  wget repourl/rstudio-server-version-amd64.deb
                   gdebi -n rstudio-server-version-amd64.deb  
                 fi
                 echo www-port=80 >> /etc/rstudio/rserver.conf
