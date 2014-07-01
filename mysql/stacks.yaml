@@ -1,6 +1,8 @@
 HeatTemplateFormatVersion: 2012-12-12
 Description: >
-  Stacks web portal. http://creskolab.uoregon.edu/stacks/
+  Stacks web portal running on NeCTAR sa node for volume storage 
+  access. For the information of Stacks, see 
+  http://creskolab.uoregon.edu/stacks/
 Parameters: 
   InstanceType: 
     Description: Stacks web portal - Stock MySQL and Apache and PHP 
@@ -17,7 +19,7 @@ Parameters:
     Type: String
   Version: 
     AllowedPattern: '[.0-9]*'
-    ConstraintDescription: can contain only alphanumeric characters, spaces, dashes and underscores.
+    ConstraintDescription: can contain only dot and numbers
     Description: >
       The version of Stacks is going to be installed. Different 
       versions of SQL and PHP can be different and need to be 
@@ -26,8 +28,8 @@ Parameters:
     MinLength: 1
     Type: String
   KeyName: 
-    AllowedPattern: '[-_ a-zA-Z0-9]*'
-    ConstraintDescription: can contain only alphanumeric characters, spaces, dashes and underscores.
+    AllowedPattern: '[-_a-zA-Z0-9]*'
+    ConstraintDescription: can contain only alphanumeric characters, dashes and underscores.
     Description: Name of an existing OpenStack KeyPair to enable SSH access to the instance.
     MaxLength: 64
     MinLength: 1
@@ -47,8 +49,8 @@ Parameters:
     Default: php_user
     MinLength: 1
     MaxLength: 41
-    AllowedPattern: '[-_a-zA-Z]*'
-    ConstraintDescription: must contain only alphanumeric characters.
+    AllowedPattern: '[-_a-zA-Z0-9]*'
+    ConstraintDescription: can contain only alphanumeric characters, dashes and underscores.
   WebDBPassword:
     Type: String
     Default: phppassword
@@ -58,17 +60,17 @@ Parameters:
     MaxLength: 41
     AllowedPattern: '[a-zA-Z0-9]*'
     ConstraintDescription: must contain only alphanumeric characters.
-  StackUser:
+  WebUser:
     Type: String
     Description: User name for PHP scripts accessing MySQL
-    Default: stack
+    Default: stacksowner
     MinLength: 1
     MaxLength: 41
-    AllowedPattern: '[a-zA-Z0-9]*'
-    ConstraintDescription: must contain only alphanumeric characters.
-  StackPassword:
+    AllowedPattern: '[-_a-zA-Z0-9]*'
+    ConstraintDescription: can contain only alphanumeric characters, dashes and underscores.
+  WebPassword:
     Type: String
-    Default: stackpassword
+    Default: pass
     NoEcho: true
     Description: Password for PHP scripts accessing MySQL
     MinLength: 1
@@ -123,9 +125,50 @@ Resources:
                 [mysqld_safe]
                 log-error=/var/log/mysqld.log
                 pid-file=/var/run/mysqld/mysqld.pid
+            /home/ec2-user/.my.cnf:
+              content: |
+                [client]
+                user=root
+                password=rootpasswd
+                host=localhost
+                port=3306
+              owner: ec2-user
+              group: ec2-user
+              mode:  "000660" 
+            /tmp/set_auth_digest:
+              content: |
+                #!/usr/bin/expect 
+                set user [lindex $argv 0] 
+                set pass [lindex $argv 1] 
+                spawn htdigest -c /usr/local/share/stacks/php/stack_auth_digest stacks $user
+                expect "password:"
+                send "$pass\r"
+                expect "password:"
+                send "$pass\r"
+                expect "#"
+              owner: root
+              group: root
+              mode:  "000700"
+            /etc/httpd/conf.d/site_global.conf:
+              content: |
+                <Location />
+                    AuthType Digest 
+                    AuthName "stacks" 
+                    AuthDigestProvider file 
+                    AuthUserFile /usr/local/share/stacks/php/stack_auth_digest 
+                    Require valid-user 
+                </Location>               
+              owner: root
+              group: root
+              mode:  "000644"
           packages: 
-            yum: 
+            yum:
+              man: []
+              expect: []
+              lvm2: [] 
               vim-enhanced: []
+              sysstat: []
+              at: []
               httpd: []
               php: []
               php-pear-MDB2-Driver-mysql: []
@@ -152,19 +195,20 @@ Resources:
         Ref: InstanceType
       KeyName: 
         Ref: KeyName
-      SecurityGroups: [{Ref: DBServerSecurityGroup}] 
+      SecurityGroups: [{Ref: DBServerSecurityGroup}]
+      AvailabilityZone: sa 
       UserData: 
         Fn::Base64: 
            Fn::Replace:
             - AWS::StackName: {Ref: 'AWS::StackName'}
               dbrootpwd: {Ref: DBRootPassword}
               stack_version: {Ref: Version}
-              stack_user: {Ref: StackUser}
-              stack_pass: {Ref: StackPassword}
               web_db_user: {Ref: WebDBUser}
               web_db_user_pass: {Ref: WebDBPassword}
+              webuser: {Ref: WebUser}
+              webpass: {Ref: WebPassword}
             - |
-                #!/bin/bash -v
+                #!/bin/bash
                 yum update -y
                 /usr/bin/cfn-init -s AWS::StackName -r StacksPortal 
 
@@ -179,9 +223,7 @@ Resources:
                 FLUSH PRIVILEGES;
                 exit
                 EOF
-
-#                sed -i.orig "s/\(\[mysqld\]\)/\1\nmyisam-recover = BACKUP\nexpire_logs_days = 10\nmax_binlog_size = 100M\ninnodb_file_per_table = 1/" /etc/my.cnf
-#                service mysqld restart
+                sed -i s/rootpasswd/dbrootpwd/ /home/ec2-user/.my.cnf
 
                 # compile Stacks
                 ln -s /usr/lib64/libbam.so /usr/lib/libbam.a
@@ -205,8 +247,14 @@ Resources:
                 EOF
                 chown :apache /usr/local/share/stacks/php/export
                 chmod g+w /usr/local/share/stacks/php/export
+                /tmp/set_auth_digest webuser webpass
+                rm /tmp/set_auth_digest
                 service httpd restart
                 
+                # enble exporting scripts to access databases:
+                cp /usr/local/share/stacks/sql/mysql.cnf.dist /usr/local/share/stacks/sql/mysql.cnf
+                sed -i -e "s/dbuser/web_db_user/" -e "s/dbpass/web_db_user_pass/" /usr/local/share/stacks/sql/mysql.cnf
+
                 # Create script for adding database and user for Stacks running remotely
                 (
                 cat <<'INEOF'
@@ -236,13 +284,16 @@ Resources:
                 exit
                 EOF
                 INEOF
-                ) > /home/user/ec2-user/add_db.sh
-                chown ec2-user /home/user/ec2-user/add_db.sh
-                chmod u+x /home/user/ec2-user/add_db.sh
-
+                ) > /home/ec2-user/add_db.sh
+                chown ec2-user /home/ec2-user/add_db.sh
+                chmod u+x /home/ec2-user/add_db.sh
+                
+                iip=`curl -s http://169.254.169.254/2009-04-04/meta-data/local-ipv4`
+                echo $iip
+                sed -i -e s,stackshost.edu/,$iip/, -e s,@stackshost.edu,@ersa.edu.au, /usr/local/bin/stacks_export_notify.pl 
 Outputs: 
   AccessURL: 
-    Description: 'Access Stacks: '
+    Description: 'Stacks db-web server is ruuning on NeCTAR sa node. Use /home/ec2-user/add_db.sh to add new databases. Access Stacks portal var:'
     Value: 
     Value: 
       Fn::Join: 
