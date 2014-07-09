@@ -89,7 +89,7 @@ Resources:
                 # Setup MySQL root password 
                 mysqladmin -u root password dbrootpwd
                 cat << EOF | mysql -u root --password=dbrootpwd
-                GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'dbrootpwd' WITH GRANT OPTION;
+                GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
                 FLUSH PRIVILEGES;
                 exit
                 EOF

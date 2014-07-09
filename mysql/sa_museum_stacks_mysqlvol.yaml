@@ -1,15 +1,13 @@
 HeatTemplateFormatVersion: 2012-12-12
 Description: >
-  Stacks web portal running on NeCTAR sa node for volume storage 
-  access. The attached volume will be formatted and data on it will 
-  be lost. For the information of Stacks, see 
-  http://creskolab.uoregon.edu/stacks/
+  Web portal of Stacks (http://creskolab.uoregon.edu/stacks/) 
+  running on NeCTAR sa node with MySQL stored on volume storage. 
 Parameters: 
   InstanceType: 
-    Description: Size of the server to host Stacks web portal with stock MySQL and Apache and PHP 
+    Description: Size of the server to host Stacks web portal - stock MySQL and Apache and PHP 
     Type: String
     Default: m1.medium
-    AllowedValues: [m1.small, m1.medium, m1.large]
+    AllowedValues: [m1.medium, m1.large]
     ConstraintDescription: must be a valid nova instance type.
   ImageId:
     Default: 96761a90-635b-4718-8deb-f4ff57632db4
@@ -20,7 +18,7 @@ Parameters:
   Version: 
     Type: String
     AllowedPattern: '[.0-9]*'
-    ConstraintDescription: can contain only dot and numbers
+    ConstraintDescription: can contain only alphanumeric characters, spaces, dashes and underscores.
     Description: >
       The version of Stacks is going to be installed. The version of 
       Stacks installed on web portal has to be matched to the 
@@ -28,12 +26,13 @@ Parameters:
     MinLength: 3
     Default: '1.19'
   KeyName: 
-    AllowedPattern: '[-_a-zA-Z0-9]*'
-    ConstraintDescription: can contain only alphanumeric characters, dashes and underscores.
+    AllowedPattern: '[-_ a-zA-Z0-9]*'
+    ConstraintDescription: can contain only alphanumeric characters, spaces, dashes and underscores.
     Description: Name of an existing OpenStack KeyPair to enable SSH access to the instance.
     MaxLength: 64
     MinLength: 1
     Type: String
+    Default: sa_museum_stacks
   DBRootPassword: 
     Default: admin
     NoEcho: true
@@ -49,54 +48,37 @@ Parameters:
     Default: php_user
     MinLength: 3
     MaxLength: 41
-    AllowedPattern: '[-_a-zA-Z0-9]*'
-    ConstraintDescription: can contain only alphanumeric characters, dashes and underscores.
+    AllowedPattern: '[-_a-zA-Z]*'
+    ConstraintDescription: must contain only alphanumeric characters.
   WebDBPassword:
     Type: String
     Default: phppassword
     NoEcho: true
     Description: Password for PHP scripts accessing MySQL
-    MinLength: 5
-    MaxLength: 41
-    AllowedPattern: '[a-zA-Z0-9]*'
-    ConstraintDescription: must contain only alphanumeric characters.
-  WebUser:
-    Type: String
-    Description: User name for accessing databases through web browser.
-    Default: webstacks
     MinLength: 1
-    MaxLength: 41
-    AllowedPattern: '[-_a-zA-Z0-9]*'
-    ConstraintDescription: can contain only alphanumeric characters, dashes and underscores.
-  WebPassword:
-    Type: String
-    Default: pass
-    NoEcho: true
-    Description: Password of user accessing databases through web browser.
-    MinLength: 5
-    MaxLength: 41
-    AllowedPattern: '[a-zA-Z0-9]*'
-    ConstraintDescription: must contain only alphanumeric characters.
-  StacksUser:
-    Type: String
-    Description: User name for uploading data in to MySQL database.
-    Default: stacksowner
-    MinLength: 1
-    MaxLength: 41
-    AllowedPattern: '[-_a-zA-Z0-9]*'
-    ConstraintDescription: can contain only alphanumeric characters, dashes and underscores.
-  StacksPassword:
-    Type: String
-    Default: pass
-    NoEcho: true
-    Description: Password of user uploading data in to MySQL database.
-    MinLength: 5
     MaxLength: 41
     AllowedPattern: '[a-zA-Z0-9]*'
     ConstraintDescription: must contain only alphanumeric characters.
   VolumeID: 
     Description: ID of a volume to be mounted for MySQL server.
     Type: String
+  WebUser:
+    Type: String
+    Description: User name for accessing databases through web browser.
+    Default: stacksowner
+    MinLength: 1
+    MaxLength: 41
+    AllowedPattern: '[-_a-zA-Z]*'
+    ConstraintDescription: must contain only alphanumeric characters.
+  WebPassword:
+    Type: String
+    Default: pass
+    NoEcho: true
+    Description: Password of user accessing databases through web browser.
+    MinLength: 1
+    MaxLength: 41
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
 Resources:
   MountExisting:
     Type: AWS::EC2::VolumeAttachment
@@ -104,26 +86,6 @@ Resources:
       InstanceId: {Ref: StacksPortal}
       VolumeId: {Ref: VolumeID}
       Device: /dev/vdc
-  ServerSecurityGroup: 
-    Type: AWS::EC2::SecurityGroup
-    Properties: 
-      GroupDescription: Enable SSH, MySQL t port 3306 and HTTP access
-      SecurityGroupIngress: 
-        - 
-          CidrIp: 0.0.0.0/0
-          FromPort: '22'
-          IpProtocol: tcp
-          ToPort: '22'
-        - 
-          CidrIp: 0.0.0.0/0
-          FromPort: '3306'
-          IpProtocol: tcp
-          ToPort: '3306'
-        - 
-          CidrIp: 0.0.0.0/0
-          FromPort: '80'
-          IpProtocol: tcp
-          ToPort: '80'
   StacksPortal: 
     Type: AWS::EC2::Instance
     Metadata: 
@@ -133,6 +95,7 @@ Resources:
             /etc/my.cnf:
               content: |
                 [mysqld]
+                myisam-recover = BACKUP
                 expire_logs_days = 10
                 max_binlog_size = 100M
                 datadir=/var/lib/mysql
@@ -159,15 +122,17 @@ Resources:
                 port=3306
               owner: ec2-user
               group: ec2-user
-              mode:  "000660" 
+              mode:  "000660"
             /home/ec2-user/add_db.sh:
               content: |
                 #!/bin/bash
                 dbname=$1
-                dbowner=DBOWNER
+                dbowner=$2
+                theirpwd=$3
 
-                if [ $# != 1 ];then
-                  echo "It needs one argument: db_prefix."
+                if [ $# != 3 ];then
+                  echo "It needs exact three args: db_prefix, owner, password. $# given."
+                  echo -e "\tAlways provide owner and password even they have been provided when creating other databases."
                   exit 1
                 fi
 
@@ -176,8 +141,8 @@ Resources:
                 use ${dbname}_radtags;
                 source /usr/local/share/stacks/sql/stacks.sql;
                 use mysql;
-                # Grant access accesses to an existing user
-                GRANT ALL ON ${dbname}_radtags.* TO '$dbowner'@'%';
+                # assume this is the first time, otherwise, create user
+                GRANT ALL ON ${dbname}_radtags.* TO '$dbowner'@'%' IDENTIFIED BY '$theirpwd';
                 GRANT SELECT ON ${dbname}_radtags.* TO 'php_user'@'localhost'; 
                 GRANT UPDATE ON ${dbname}_radtags.catalog_annotations TO 'php_user'@'localhost';
                 GRANT DELETE ON ${dbname}_radtags.catalog_annotations TO 'php_user'@'localhost';
@@ -185,9 +150,8 @@ Resources:
                 FLUSH PRIVILEGES;
                 exit
                 EOF
-
+                
                 echo "The name of database is ${dbname}_radtags."
-                echo "The owner of the database is $dbowner."
                 echo -e "\tUse this from the remote machine running pipeline to upload data for display."
               owner: ec2-user
               group: ec2-user
@@ -224,21 +188,11 @@ Resources:
               owner: root
               group: root
               mode:  "000644"
-            /var/www/html/.my.cnf:
-              content: |
-                [client]
-                user=DBOWNER
-                password=STACKSPWD
-                host=SERVERIP
-                port=3306
-              owner: root
-              group: root
-              mode:  "000644"
           packages: 
             yum:
               man: []
               expect: []
-              screen: [] 
+              lvm2: [] 
               vim-enhanced: []
               sysstat: []
               at: []
@@ -268,7 +222,7 @@ Resources:
         Ref: InstanceType
       KeyName: 
         Ref: KeyName
-      SecurityGroups: [{Ref: ServerSecurityGroup}] 
+      SecurityGroups: [default, web_app_server, mysql]
       AvailabilityZone: sa 
       UserData: 
         Fn::Base64: 
@@ -280,8 +234,6 @@ Resources:
               webdbuserpass: {Ref: WebDBPassword}
               web_user: {Ref: WebUser}
               webuserpass: {Ref: WebPassword}
-              stacksuser: {Ref: StacksUser}
-              stackspasswd: {Ref: StacksPassword}
             - |
                 #!/bin/bash
                 yum update -y
@@ -301,17 +253,13 @@ Resources:
                 # web_db_user:webdbuserpass created in mysqld and used in contstants.php
                 cat << EOF | mysql -u root --password=dbrootpwd
                 # remove anonymous users, create web db user, no client user accounts created
-                # stacksuser is the owner of new databases of _radtags
                 DELETE FROM mysql.user WHERE User='';
                 DROP DATABASE test;
-                CREATE USER 'stacksuser'@'%' IDENTIFIED BY 'stackspasswd';
                 GRANT SELECT ON *.* TO 'web_db_user'@'localhost' IDENTIFIED BY 'webdbuserpass';
                 FLUSH PRIVILEGES;
                 exit
                 EOF
                 sed -i s/rootpasswd/dbrootpwd/ /home/ec2-user/.my.cnf
-                # Make add_db.sh knows which user owns the new databases
-                sed -i s/DBOWNER/stacksuser/ /home/ec2-user/add_db.sh
 
                 # compile Stacks
                 ln -s /usr/lib64/libbam.so /usr/lib/libbam.a
@@ -337,12 +285,12 @@ Resources:
                 sed -i -e "s/dbuser/web_db_user/" -e "s/dbpass/webdbuserpass/" /usr/local/share/stacks/sql/mysql.cnf
                 
                 iip=`curl -s http://169.254.169.254/2009-04-04/meta-data/local-ipv4`
-                sed -i -e s,stackshost.edu/,$iip/, -e s,@stackshost.edu,@ersa.edu.au, /usr/local/bin/stacks_export_notify.pl
-                sed -i -e s/SERVERIP/$iip/ -e s/DBOWNER/stacksuser/ -e s/STACKSPWD/stackspasswd/ /var/www/html/.my.cnf 
+                echo $iip
+                sed -i -e s,stackshost.edu/,$iip/, -e s,@stackshost.edu,@ersa.edu.au, /usr/local/bin/stacks_export_notify.pl 
 
 Outputs: 
   AccessURL: 
-    Description: 'Stacks database and web server is ruuning on NeCTAR sa node. Before uploading data from pipeline, use /home/ec2-user/add_db.sh to add new databases. To view uploaded data, go:'
+    Description: 'Stacks db-web server is running on NeCTAR sa node. Use /home/ec2-user/add_db.sh to add new databases. Access Stacks portal var:'
     Value: 
       Fn::Join: 
         - ''
@@ -350,15 +298,3 @@ Outputs:
           - http://
           - {'Fn::GetAtt': [StacksPortal, PublicIp]}
           - /stacks
-  UserName: 
-    Description: 'Username for accessing above URL is:'
-    Value: {Ref: WebUser}
-  MyCNF: 
-    Description: 'The config file of mysql for the machine running pipeline. For security reason, please consider to remove it after downloaded.'
-    Value: 
-      Fn::Join: 
-        - ''
-        -
-          - http://
-          - {'Fn::GetAtt': [StacksPortal, PublicIp]}
-          - '/.my.cnf'
