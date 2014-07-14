@@ -1,7 +1,7 @@
 HeatTemplateFormatVersion: 2012-12-12
 Description: > 
   CFN template snippet. Create a volume storge and attach to an 
-  instance. It also attach an existing one to /dev/vdd. You have to 
+  instance. It also attaches an existing one to /dev/vdd. You have to 
   have NeCTAR volume storage allocation and knowing where to create 
   storage. Not all nodes have stroage. All mounted volumes have to 
   be umounted and de-attched before delete stack. The demo image is 
