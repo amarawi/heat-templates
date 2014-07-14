@@ -1,8 +1,8 @@
 HeatTemplateFormatVersion: 2012-12-12
 
 Description: >
-  RStudio Server: the premier integrated development environment for 
-  R runs over the web. More info: http://www.rstudio.com/
+          RStudio Server: the premier integrated development environment for 
+          R runs over the web. More info: http://www.rstudio.com/
 Parameters:
 ## No NeCTAR ubuntu image has cfn-tools supprts
   ImageId:
@@ -40,7 +40,7 @@ Parameters:
      The version of RStudio. 
      Note: since R 3.1.0 release in EPEL in May, 2014 there is no stable release supports CentOS.
      So this version will be for daily build if CentOS server is chosen. Default is 0.98.894. Other
-     see http://www.rstudio.com/ide/download/preview
+     see http://www.rstudio.com/ide/download/preview. 0.98.945 released on June 21
     Type: String
     MinLength: 4
     AllowedPattern: '\d+\.\d+\.\d+'

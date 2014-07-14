@@ -107,7 +107,7 @@ Resources:
   ServerSecurityGroup: 
     Type: AWS::EC2::SecurityGroup
     Properties: 
-      GroupDescription: Enable SSH, MySQL t port 3306 and HTTP access
+      GroupDescription: Enable accesses of SSH, MySQL port 3306 and HTTP to the instance
       SecurityGroupIngress: 
         - 
           CidrIp: 0.0.0.0/0

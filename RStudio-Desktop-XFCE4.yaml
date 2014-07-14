@@ -50,7 +50,8 @@ Parameters:
      The version of RStudio. Check on RStudio's website to match with release or build. 
      The default value is the latest stable release version.
      Note: on May 30, 2014 there is no release supports Fedora 20. So we 
-     get 0.98.872 from daily builds server at the time of writing.
+     get 0.98.872 from daily builds server at the time of writing. New stable version:
+     0.98.945 released on June 21, 2014
     Type: String
     AllowedPattern: '\d+\.\d+\.\d+'
 
