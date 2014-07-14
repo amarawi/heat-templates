@@ -1,0 +1,116 @@
+HeatTemplateFormatVersion: 2012-12-12
+Description: >
+    This is a template snippet to set up a disk usage monitor. When 
+    any one of the disks reach to the threshold, it sends an alert. 
+    ext file system has a default of 5% reservation. So below 95% 
+    will be treated as 100%.
+Parameters: 
+  InstanceType: 
+    Description: An instance
+    Type: String
+    Default: m1.small
+    AllowedValues: [m1.small, m1.medium, m1.large]
+    ConstraintDescription: must be a valid nova instance type.
+  ImageId:
+    Default: f40484c9-e949-4288-8330-8fdf64d047af
+    Description: An image has postfix installed by default, e.g. NeCTAR CentOS images.
+    Type: String
+  KeyName: 
+    AllowedPattern: '[-_a-zA-Z0-9]*'
+    ConstraintDescription: can contain only alphanumeric characters, dashes and underscores.
+    Description: Name of an existing OpenStack KeyPair to enable SSH access to the instance.
+    MaxLength: 64
+    MinLength: 1
+    Type: String
+  Receiver:
+    Type: String
+    Description: The email address where to send alerts
+  Threshold:
+    Type: String
+    Description: The maximal percentage of usage is allowed. An alert will be sent once usage of a disk is no less than this value.
+    AllowedPattern: '[0-9]{1,2}'
+    ConstraintDescription: must between 0 - 99
+Resources:
+  DiskMonitor: 
+    Type: AWS::EC2::Instance
+    Metadata: 
+      AWS::CloudFormation::Init: 
+        config: 
+          files:
+            /home/ec2-user/disk_monitor.sh:
+              content: |
+                #!/bin/bash
+                # Mointor storage usages of a NeCTAR vm, send email by postfix var a relay server
+                receiver='TOWHOM'
+                threshold=MAXI
+                fromhost=`hostname`
+                TFILE="/tmp/$(basename $0).$$.tmp"
+                
+                PATH=/sbin:/bin:/usr/sbin:/usr/bin
+                sendmsg() {
+                    sendmail $receiver <<EOF
+                subject:Alert - space is low@SERVERIP
+                from:alert@SERVERIP
+                to:owner
+                Dear user,
+
+                This is a message automatically sent from your server becuase disk usage is above threshold.
+
+                   Hostanme: $fromhost
+                   $1
+                   
+                   You might need to resolve the issue or disable the alert.
+
+                Regards,
+
+                The machine   
+                EOF
+                }
+
+                df | grep -vE '^Filesystem|tmpfs' | awk '{ print $5 " " $1 }' | while read output;
+                do
+                  usep=$(echo $output | awk '{ print $1}' | cut -d'%' -f1  )
+                  partition=$(echo $output | awk '{ print $2 }' )
+                  if [ $usep -ge $threshold ]; then
+                      echo -e "$partition used $usep%" >> $TFILE
+                  fi
+                done
+
+                if [ -e $TFILE ]; then
+                    msg=`cat $TFILE`
+                    rm $TFILE
+                    sendmsg "$msg"
+                fi
+              owner: ec2-user
+              group: ec2-user
+              mode:  "000770" 
+          packages: 
+            yum:
+              man: []
+              vim-enhanced: []
+    Properties: 
+      ImageId: 
+        Ref: ImageId
+      InstanceType: 
+        Ref: InstanceType
+      KeyName: 
+        Ref: KeyName
+      SecurityGroups: [default]
+      UserData: 
+        Fn::Base64: 
+           Fn::Replace:
+            - AWS::StackName: {Ref: 'AWS::StackName'}
+              towhom: {Ref: Receiver}
+              maxvalue: {Ref: Threshold}
+            - |
+                #!/bin/bash
+                yum update -y
+                /usr/bin/cfn-init -s AWS::StackName -r DiskMonitor 
+
+                iip=`curl -s http://169.254.169.254/2009-04-04/meta-data/local-ipv4`
+                sed -i -e s,SERVERIP,$iip, -e s,TOWHOM,towhom, -e s,MAXI,maxvalue, /home/ec2-user/disk_monitor.sh
+                (crontab -l; echo "30 * * * * /home/ec2-user/disk_monitor.sh") | crontab
+Outputs: 
+  AccessIP: 
+    Description: 'The monitor checks space usage ever 30 minutes on server:'
+    Value: {'Fn::GetAtt': [DiskMonitor, PublicIp]}
