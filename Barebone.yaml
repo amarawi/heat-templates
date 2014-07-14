@@ -1,10 +1,14 @@
-HeatTemplateFormatVersion: '2012-12-12'
+HeatTemplateFormatVersion: 2012-12-12
 Description: A bare bone instance using any NeCTAR image. This is used for defining essential parts of a HEAT CFN template.
 Parameters:
   ImageId:
-    Description: Any NeCTAR image ID. Check default ID if failed to create.
+    Description: >
+      Any NeCTAR image name or ID. NeCTAR reuse image name when 
+      there is an update of an image. So if you want a specific 
+      image, use ID. NeCTAR does not keep all IDs of an image, so 
+      you might have to keep a list yourself.
     Type: String
-    Default: 96761a90-635b-4718-8deb-f4ff57632db4 
+    Default: 'NeCTAR CentOS 6.5 x86_64' 
   InstanceType: 
     Description: OpenStack instance type
     Type: String

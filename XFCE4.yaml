@@ -5,9 +5,9 @@ Description: >
 Parameters:
 ## No NeCTAR ubuntu image has cfn-tools supprts
   ImageId:
-    Description: Any NeCTAR image ID. The image has to have cfn-tools intalled. Defaut is NeCTAR Fedora 20.
+    Description: Name or ID of a NeCTAR image which has cfn-tools intalled. Defaut is NeCTAR Fedora 20 x86_64.
     Type: String
-    Default: 249167f4-3d45-402a-9362-557c23628352
+    Default: 'NeCTAR Fedora 20 x86_64'
   InstanceType: 
     Description: OpenStack instance type
     Type: String
